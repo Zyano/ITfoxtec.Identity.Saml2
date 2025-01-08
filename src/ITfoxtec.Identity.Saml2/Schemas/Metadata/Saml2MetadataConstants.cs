@@ -47,9 +47,13 @@ namespace ITfoxtec.Identity.Saml2.Schemas.Metadata
         {
             public const string EntityDescriptor = "EntityDescriptor";
 
+            public const string EntitiesDescriptor = "EntitiesDescriptor";
+
             public const string SPSsoDescriptor = "SPSSODescriptor";
 
-            public const string IdPSsoDescriptor = "IDPSSODescriptor";            
+            public const string IdPSsoDescriptor = "IDPSSODescriptor";
+
+            public const string Organization = "Organization";
 
             public const string ContactPerson = "ContactPerson";
 
@@ -129,7 +133,13 @@ namespace ITfoxtec.Identity.Saml2.Schemas.Metadata
 
             public const string Type = "type";
     
-            public const string FriendlyName = "FriendlyName"; 
+            public const string FriendlyName = "FriendlyName";
+
+            public const string OrganizationName = "OrganizationName";
+
+            public const string OrganizationDisplayName = "OrganizationDisplayName";
+
+            public const string OrganizationURL = "OrganizationURL";
         }
 
         public class KeyTypes

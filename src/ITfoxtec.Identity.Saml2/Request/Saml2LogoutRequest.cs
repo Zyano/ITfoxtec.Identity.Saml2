@@ -32,7 +32,7 @@ namespace ITfoxtec.Identity.Saml2
         /// [Optional]
         /// An indication of the reason for the logout, in the form of a URI reference.
         /// </summary>
-        public Uri Reason { get; set; }        
+        public Uri Reason { get; set; }
 
         public Saml2LogoutRequest(Saml2Configuration config) : base(config)
         {
@@ -57,8 +57,18 @@ namespace ITfoxtec.Identity.Saml2
                     NameId = new Saml2NameIdentifier(ReadClaimValue(identity, Saml2ClaimTypes.NameId), new Uri(nameIdFormat));
 
                 }
+                var nameIdNameQualifier = ReadClaimValue(identity, Saml2ClaimTypes.NameQualifier, false);
+                if (!string.IsNullOrEmpty(nameIdNameQualifier))
+                {
+                    NameId.NameQualifier = nameIdNameQualifier;
+                }
+                var nameIdSPNameQualifier = ReadClaimValue(identity, Saml2ClaimTypes.SPNameQualifier, false);
+                if (!string.IsNullOrEmpty(nameIdSPNameQualifier))
+                {
+                    NameId.SPNameQualifier = nameIdSPNameQualifier;
+                }
                 SessionIndex = ReadClaimValue(identity, Saml2ClaimTypes.SessionIndex, false);
-            }           
+            }
         }
 
         private static string ReadClaimValue(ClaimsIdentity identity, string claimType, bool required = true)
@@ -66,7 +76,7 @@ namespace ITfoxtec.Identity.Saml2
             var claim = identity.Claims.FirstOrDefault(c => c.Type == claimType);
             if (claim == null)
             {
-                if(required)
+                if (required)
                 {
                     throw new InvalidOperationException($"Claim Type '{claimType}' is required to do logout.");
                 }
@@ -103,15 +113,20 @@ namespace ITfoxtec.Identity.Saml2
 
             if (NameId != null)
             {
-                object[] nameIdContent;
+                var nameIdContent = new List<object>() { NameId.Value };
                 if (NameId.Format != null)
                 {
-                    nameIdContent = new object[] { NameId.Value, new XAttribute(Schemas.Saml2Constants.Message.Format, NameId.Format) };
+                    nameIdContent.Add(new XAttribute(Schemas.Saml2Constants.Message.Format, NameId.Format));
                 }
-                else
+                if (NameId.NameQualifier != null)
                 {
-                    nameIdContent = new object[] { NameId.Value };
+                    nameIdContent.Add(new XAttribute(Schemas.Saml2Constants.Message.NameQualifier, NameId.NameQualifier));
                 }
+                if (NameId.SPNameQualifier != null)
+                {
+                    nameIdContent.Add(new XAttribute(Schemas.Saml2Constants.Message.SpNameQualifier, NameId.SPNameQualifier));
+                }
+
                 yield return new XElement(Schemas.Saml2Constants.AssertionNamespaceX + Schemas.Saml2Constants.Message.NameId, nameIdContent);
             }
 
@@ -126,6 +141,11 @@ namespace ITfoxtec.Identity.Saml2
             base.Read(xml, validate, detectReplayedTokens);
 
             NameId = XmlDocument.DocumentElement[Schemas.Saml2Constants.Message.NameId, Schemas.Saml2Constants.AssertionNamespace.OriginalString].GetValueOrNull<Saml2NameIdentifier>();
+            if(NameId != null)
+            {
+                NameId.NameQualifier = XmlDocument.DocumentElement[Schemas.Saml2Constants.Message.NameId, Schemas.Saml2Constants.AssertionNamespace.OriginalString].GetAttribute(Schemas.Saml2Constants.Message.NameQualifier);
+                NameId.SPNameQualifier = XmlDocument.DocumentElement[Schemas.Saml2Constants.Message.NameId, Schemas.Saml2Constants.AssertionNamespace.OriginalString].GetAttribute(Schemas.Saml2Constants.Message.SpNameQualifier);
+            }
 
             SessionIndex = XmlDocument.DocumentElement[Schemas.Saml2Constants.Message.SessionIndex, Schemas.Saml2Constants.ProtocolNamespace.OriginalString].GetValueOrNull<string>();
         }

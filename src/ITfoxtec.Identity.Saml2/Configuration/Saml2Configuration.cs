@@ -30,6 +30,8 @@ namespace ITfoxtec.Identity.Saml2
         public bool ValidateArtifact { get; set; } = true;
 
         public string SignatureAlgorithm { get; set; } = Saml2SecurityAlgorithms.RsaSha256Signature;
+
+        // Optionally set a canonicalization method, default "http://www.w3.org/2001/10/xml-exc-c14n#". E.g, set "http://www.w3.org/2001/10/xml-exc-c14n#WithComments" for Amazon.
         public string XmlCanonicalizationMethod { get; set; } = SignedXml.XmlDsigExcC14NTransformUrl;        
 
         public X509Certificate2 SigningCertificate { get; set; }
@@ -47,7 +49,7 @@ namespace ITfoxtec.Identity.Saml2
 
         public string AllowedIssuer { get; set; }
 
-        public List<X509Certificate2> SignatureValidationCertificates { get; protected set; } = new List<X509Certificate2>();
+        public List<X509Certificate2> SignatureValidationCertificates { get; set; } = new List<X509Certificate2>();
         public X509CertificateValidationMode CertificateValidationMode { get; set; } = X509CertificateValidationMode.ChainTrust;
         public X509RevocationMode RevocationMode { get; set; } = X509RevocationMode.Online;
         public X509CertificateValidator CustomCertificateValidator { get; set; }
@@ -66,7 +68,7 @@ namespace ITfoxtec.Identity.Saml2
         public bool DetectReplayedTokens { get; set; } = false;
 
         public bool AudienceRestricted { get; set; } = true;
-        public List<string> AllowedAudienceUris { get; protected set; } = new List<string>();
+        public List<string> AllowedAudienceUris { get; set; } = new List<string>();
 
         /// <summary>
         /// Sign and validate signed authn requests.
@@ -77,5 +79,10 @@ namespace ITfoxtec.Identity.Saml2
         /// Sign type for the authn responses created by the library.
         /// </summary>
         public Saml2AuthnResponseSignTypes AuthnResponseSignType { get; set; } = Saml2AuthnResponseSignTypes.SignResponse;
+
+        /// <summary>
+        /// Include key info name in signature.
+        /// </summary>
+        public bool IncludeKeyInfoName { get; set; }
     }
 }

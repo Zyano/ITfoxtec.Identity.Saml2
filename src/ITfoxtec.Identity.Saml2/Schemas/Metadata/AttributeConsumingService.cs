@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Xml.Linq;
 
 namespace ITfoxtec.Identity.Saml2.Schemas.Metadata
@@ -15,13 +16,34 @@ namespace ITfoxtec.Identity.Saml2.Schemas.Metadata
         /// [Required]
         /// Language-qualified names for the service.
         /// </summary>
-        public ServiceName ServiceName { get; set; }
+        [Obsolete("The ServiceName method is deprecated. Please use ServiceNames which is a list of service names.")]
+        public LocalizedNameType ServiceName { get; set; }
+
+        /// <summary>
+        /// [Required]
+        /// A required attribute that assigns a unique integer value to the element so that it can be referenced
+        /// in a protocol message.
+        /// </summary>
+        public int Index { get; set; } = 0;
+
+        /// <summary>
+        /// [Required]
+        /// Language-qualified names for the service.
+        /// </summary>
+        public IEnumerable<LocalizedNameType> ServiceNames { get; set; }
 
         /// <summary>
         /// [Required]
         /// A required element specifying attributes required or desired by this service.
         /// </summary>
         public IEnumerable<RequestedAttribute> RequestedAttributes { get; set; }
+
+        /// <summary>
+        /// [Optional]
+        /// Identifies the default service supported by the service provider. Useful if the specific service is not
+        /// otherwise indicated by application context.If omitted, the value is assumed to be false
+        /// </summary>
+        public bool IsDefault { get; set; } = true;
 
         public XElement ToXElement()
         {
@@ -34,10 +56,23 @@ namespace ITfoxtec.Identity.Saml2.Schemas.Metadata
 
         protected IEnumerable<XObject> GetXContent()
         {
-            yield return new XAttribute(Saml2MetadataConstants.Message.Index, 0);
-            yield return new XAttribute(Saml2MetadataConstants.Message.IsDefault, true);
+            yield return new XAttribute(Saml2MetadataConstants.Message.Index, Index);
+            if (IsDefault)
+            {
+                yield return new XAttribute(Saml2MetadataConstants.Message.IsDefault, IsDefault);
+            }
 
-            yield return ServiceName.ToXElement();
+            if (ServiceNames != null)
+            {
+                foreach (var serviceName in ServiceNames)
+                {
+                    yield return serviceName.ToXElement(Saml2MetadataConstants.MetadataNamespaceX + Saml2MetadataConstants.Message.ServiceName);
+                }
+            }
+            else if (ServiceName != null)
+            {
+                yield return ServiceName.ToXElement(Saml2MetadataConstants.MetadataNamespaceX + Saml2MetadataConstants.Message.ServiceName);
+            }
 
             if (RequestedAttributes != null)
             {

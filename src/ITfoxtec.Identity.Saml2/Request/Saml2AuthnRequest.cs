@@ -3,6 +3,7 @@ using System.Xml;
 using System.Xml.Linq;
 using ITfoxtec.Identity.Saml2.Schemas;
 using System;
+using System.Security.Principal;
 
 namespace ITfoxtec.Identity.Saml2
 {
@@ -11,7 +12,7 @@ namespace ITfoxtec.Identity.Saml2
     /// </summary>
     public class Saml2AuthnRequest : Saml2Request
     {
-        public override string ElementName => Saml2Constants.Message.AuthnRequest;        
+        public override string ElementName => Saml2Constants.Message.AuthnRequest;
 
         ///<summary>
         /// [Optional]
@@ -90,6 +91,13 @@ namespace ITfoxtec.Identity.Saml2
         public Uri ProtocolBinding { get; set; }
 
         /// <summary>
+        /// [Optional] 
+        /// Specifies the human-readable name of the requester for use by the presenter's user agent or the
+        /// identity provider.
+        /// </summary>
+        public string ProviderName { get; set; }
+
+        /// <summary>
         /// [Optional]
         /// If present, specifies a filter for possible responses. Such a query asks the question "What assertions
         /// containing authentication statements do you have for this subject that satisfy the authentication
@@ -112,9 +120,18 @@ namespace ITfoxtec.Identity.Saml2
         /// <summary>
         /// [Optional]
         /// If present, specifies an Audience
-        /// Part of the OIOSAML standard used for conditions on request.
+        /// Specifies the SAML conditions the requester expects to limit the validity and/or use of the resulting
+        /// assertion(s).
         /// </summary>
         public Condition Conditions { get; set; }
+
+        /// <summary>
+        /// [Optional]
+        ///  Specifies a set of identity providers trusted by the requester to authenticate the presenter, as well as
+        ///  limitations and context related to proxying of the &lt;AuthnRequest&gt; message to subsequent identity
+        ///  providers by the responder.
+        /// </summary>
+        public Scoping Scoping { get; set; }
 
         public Saml2AuthnRequest(Saml2Configuration config) : base(config)
         {
@@ -166,6 +183,11 @@ namespace ITfoxtec.Identity.Saml2
                 yield return new XAttribute(Saml2Constants.Message.ProtocolBinding, ProtocolBinding);
             }
 
+            if (!string.IsNullOrEmpty(ProviderName))
+            {
+                yield return new XAttribute(Saml2Constants.Message.ProviderName, ProviderName);
+            }
+
             if (Conditions != null)
             {
                 yield return Conditions.ToXElement();
@@ -185,6 +207,11 @@ namespace ITfoxtec.Identity.Saml2
             {
                 yield return RequestedAuthnContext.ToXElement();
             }
+
+            if (Scoping != null)
+            {
+                yield return Scoping.ToXElement();
+            }
         }
 
         protected internal override void Read(string xml, bool validate = false, bool detectReplayedTokens = true)
@@ -203,11 +230,15 @@ namespace ITfoxtec.Identity.Saml2
 
             ProtocolBinding = XmlDocument.DocumentElement.Attributes[Saml2Constants.Message.ProtocolBinding].GetValueOrNull<Uri>();
 
+            ProviderName = XmlDocument.DocumentElement.Attributes[Saml2Constants.Message.ProviderName].GetValueOrNull<string>();
+
             Subject = XmlDocument.DocumentElement[Saml2Constants.Message.Subject, Saml2Constants.AssertionNamespace.OriginalString].GetElementOrNull<Subject>();
 
             NameIdPolicy = XmlDocument.DocumentElement[Saml2Constants.Message.NameIdPolicy, Saml2Constants.ProtocolNamespace.OriginalString].GetElementOrNull<NameIdPolicy>();
 
             RequestedAuthnContext = XmlDocument.DocumentElement[Saml2Constants.Message.RequestedAuthnContext, Saml2Constants.ProtocolNamespace.OriginalString].GetElementOrNull<RequestedAuthnContext>();
+
+            Scoping = XmlDocument.DocumentElement[Saml2Constants.Message.Scoping, Saml2Constants.ProtocolNamespace.OriginalString].GetElementOrNull<Scoping>();
         }
 
         protected override void ValidateElementName()

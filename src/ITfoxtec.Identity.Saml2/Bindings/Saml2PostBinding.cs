@@ -10,7 +10,7 @@ using System.Net;
 
 namespace ITfoxtec.Identity.Saml2
 {
-    public class Saml2PostBinding : Saml2Binding<Saml2PostBinding>
+    public class Saml2PostBinding : Saml2Binding
     {
         /// <summary>
         /// [Optional]
@@ -28,7 +28,7 @@ namespace ITfoxtec.Identity.Saml2
             CertificateIncludeOption = X509IncludeOption.EndCertOnly;
         }
 
-        protected override Saml2PostBinding BindInternal(Saml2Request saml2RequestResponse, string messageName)
+        protected override void BindInternal(Saml2Request saml2RequestResponse, string messageName)
         {
             BindInternal(saml2RequestResponse);
 
@@ -50,12 +50,11 @@ namespace ITfoxtec.Identity.Saml2
                 {
                     Cryptography.SignatureAlgorithm.ValidateAlgorithm(saml2RequestResponse.Config.SignatureAlgorithm);
                     Cryptography.XmlCanonicalizationMethod.ValidateCanonicalizationMethod(saml2RequestResponse.Config.XmlCanonicalizationMethod);
-                    XmlDocument = XmlDocument.SignDocument(saml2RequestResponse.Config.SigningCertificate, saml2RequestResponse.Config.SignatureAlgorithm, saml2RequestResponse.Config.XmlCanonicalizationMethod, CertificateIncludeOption, saml2RequestResponse.IdAsString);
+                    XmlDocument = XmlDocument.SignDocument(saml2RequestResponse.Config.SigningCertificate, saml2RequestResponse.Config.SignatureAlgorithm, saml2RequestResponse.Config.XmlCanonicalizationMethod, CertificateIncludeOption, saml2RequestResponse.IdAsString, saml2RequestResponse.Config.IncludeKeyInfoName);
                 }
             }
 
             PostContent = string.Concat(HtmlPostPage(saml2RequestResponse.Destination, messageName));
-            return this;
         }
 
         private IEnumerable<string> HtmlPostPage(Uri destination, string messageName)
@@ -65,10 +64,9 @@ namespace ITfoxtec.Identity.Saml2
 <html lang=""en"">
 <head>
     <meta charset=""utf-8"" />
-    <meta http-equiv=""X-UA-Compatible"" content=""IE=edge"" />
-    <title>SAML 2.0</title>
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
 </head>
-<body onload=""document.forms[0].submit()"">
+<body>
     <noscript>
         <p>
             <strong>Note:</strong> Since your browser does not support JavaScript, 
@@ -76,19 +74,22 @@ namespace ITfoxtec.Identity.Saml2
         </p>
     </noscript>
     <form action=""{0}"" method=""post"">
-        <div>", destination);
+        <div>
+", destination);
 
             yield return string.Format(
-@"<input type=""hidden"" name=""{0}"" value=""{1}""/>", messageName, Convert.ToBase64String(Encoding.UTF8.GetBytes(XmlDocument.OuterXml)));
+@"            <input type=""hidden"" name=""{0}"" value=""{1}""/>
+", messageName, Convert.ToBase64String(Encoding.UTF8.GetBytes(XmlDocument.OuterXml)));
 
             if (!string.IsNullOrWhiteSpace(RelayState))
             {
                 yield return string.Format(
-@"<input type=""hidden"" name=""{0}"" value=""{1}""/>", Saml2Constants.Message.RelayState, WebUtility.HtmlEncode(RelayState));
+@"            <input type=""hidden"" name=""{0}"" value=""{1}""/>
+", Saml2Constants.Message.RelayState, WebUtility.HtmlEncode(RelayState));
             }
 
             yield return
-@"</div>
+@"        </div>
         <noscript>
             <div>
                 <input type=""submit"" value=""Continue""/>
@@ -96,6 +97,7 @@ namespace ITfoxtec.Identity.Saml2
         </noscript>
     </form>
 </body>
+<script>window.addEventListener(""DOMContentLoaded"", function() { document.forms[0].submit() })</script>
 </html>";
         }
 

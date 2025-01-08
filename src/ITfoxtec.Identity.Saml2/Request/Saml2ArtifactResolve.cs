@@ -109,7 +109,7 @@ namespace ITfoxtec.Identity.Saml2
         {
             Cryptography.SignatureAlgorithm.ValidateAlgorithm(Config.SignatureAlgorithm);
             Cryptography.XmlCanonicalizationMethod.ValidateCanonicalizationMethod(Config.XmlCanonicalizationMethod);
-            XmlDocument = XmlDocument.SignDocument(Config.SigningCertificate, Config.SignatureAlgorithm, Config.XmlCanonicalizationMethod, CertificateIncludeOption, Id.Value);
+            XmlDocument = XmlDocument.SignDocument(Config.SigningCertificate, Config.SignatureAlgorithm, Config.XmlCanonicalizationMethod, CertificateIncludeOption, Id.Value, Config.IncludeKeyInfoName);
         }
 
         protected override IEnumerable<XObject> GetXContent()
@@ -121,7 +121,7 @@ namespace ITfoxtec.Identity.Saml2
         {
             base.Read(xml, validate, detectReplayedTokens);
 
-            Artifact = XmlDocument.DocumentElement[Saml2Constants.Message.Artifact, Saml2Constants.ProtocolNamespace.OriginalString].GetValueOrNull<string>();            
+            Artifact = XmlDocument.DocumentElement[Saml2Constants.Message.Artifact, Saml2Constants.ProtocolNamespace.OriginalString].GetValueOrNull<string>();
         }
 
         protected override void ValidateElementName()

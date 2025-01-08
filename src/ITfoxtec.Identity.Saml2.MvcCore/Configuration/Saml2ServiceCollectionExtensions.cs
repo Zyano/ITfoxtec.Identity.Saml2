@@ -17,14 +17,14 @@ namespace ITfoxtec.Identity.Saml2.MvcCore.Configuration
         /// <param name="cookieSameSite">The SameSite attribute of the cookie. The default value is Microsoft.AspNetCore.Http.SameSiteMode.Lax</param>
         /// <param name="cookieDomain">If configured, the domain to associate the cookie with.</param>
         /// <param name="cookieSecurePolicy">The cookie policy. The default value is Microsoft.AspNetCore.Http.CookieSecurePolicy.SameAsRequest.</param>
-        public static IServiceCollection AddSaml2(this IServiceCollection services, string loginPath = "/Auth/Login", bool slidingExpiration = false, string accessDeniedPath = null, ITicketStore sessionStore = null, SameSiteMode cookieSameSite = SameSiteMode.Lax, string cookieDomain = null, CookieSecurePolicy cookieSecurePolicy = CookieSecurePolicy.SameAsRequest)
+        public static IServiceCollection AddSaml2(this IServiceCollection services, string loginPath = "/Auth/Login", bool slidingExpiration = false, string accessDeniedPath = null, ITicketStore sessionStore = null, SameSiteMode cookieSameSite = SameSiteMode.Lax, string cookieDomain = null, CookieSecurePolicy cookieSecurePolicy = CookieSecurePolicy.SameAsRequest, string cookieName = null)
         {
             services.AddAuthentication(Saml2Constants.AuthenticationScheme)
                 .AddCookie(Saml2Constants.AuthenticationScheme, o =>
                 {
                     o.LoginPath = new PathString(loginPath);
                     o.SlidingExpiration = slidingExpiration;
-                    if(!string.IsNullOrEmpty(accessDeniedPath))
+                    if (!string.IsNullOrEmpty(accessDeniedPath))
                     {
                         o.AccessDeniedPath = new PathString(accessDeniedPath);
                     }
@@ -38,7 +38,11 @@ namespace ITfoxtec.Identity.Saml2.MvcCore.Configuration
                     {
                         o.Cookie.Domain = cookieDomain;
                     }
-                });
+                    if (!string.IsNullOrWhiteSpace(cookieName))
+                    {
+                        o.Cookie.Name = cookieName;
+                    }
+				});
 
             return services;
         }   

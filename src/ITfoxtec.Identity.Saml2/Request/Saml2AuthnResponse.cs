@@ -68,7 +68,7 @@ namespace ITfoxtec.Identity.Saml2
                     throw new ArgumentException("No RSA Private Key present in Decryption Certificates or missing private key read credentials.");
                 }
             }
-            if(config.EncryptionCertificate != null)
+            if (config.EncryptionCertificate != null)
             {
                 EncryptionCertificate = config.EncryptionCertificate;
                 if (config.EncryptionCertificate.GetRSAPublicKey() == null)
@@ -247,7 +247,7 @@ namespace ITfoxtec.Identity.Saml2
 
             Cryptography.SignatureAlgorithm.ValidateAlgorithm(Config.SignatureAlgorithm);
             Cryptography.XmlCanonicalizationMethod.ValidateCanonicalizationMethod(Config.XmlCanonicalizationMethod);
-            XmlDocument.SignAssertion(GetAssertionElementReference(), Config.SigningCertificate, Config.SignatureAlgorithm, Config.XmlCanonicalizationMethod, certificateIncludeOption);
+            XmlDocument.SignAssertion(GetAssertionElementReference(), Config.SigningCertificate, Config.SignatureAlgorithm, Config.XmlCanonicalizationMethod, certificateIncludeOption, Config.IncludeKeyInfoName);
         }
 
         protected internal override void Read(string xml, bool validate = false, bool detectReplayedTokens = true)
@@ -284,9 +284,11 @@ namespace ITfoxtec.Identity.Saml2
             return assertionElementCache;
         }
 
-        private XmlElement GetAssertionElementReference()
+        protected XmlElement GetAssertionElementReference()
         {
-            var assertionElements = XmlDocument.DocumentElement.SelectNodes($"//*[local-name()='{Schemas.Saml2Constants.Message.Assertion}']");
+            // Select all Assertion elements in the document that are at the top of their respective Assertion hierarchy.
+            // If the document contains <Assertion><Assertion></Assertion></Assertion> only the outer (hierarchical parent) Assertion is selected.
+            var assertionElements = XmlDocument.DocumentElement.SelectNodes($"//*[local-name()='{Schemas.Saml2Constants.Message.Assertion}']/ancestor-or-self::*[local-name()='{Schemas.Saml2Constants.Message.Assertion}'][last()]");
             if (assertionElements.Count != 1)
             {
                 throw new Saml2RequestException("There is not exactly one Assertion element. Maybe the response is encrypted (set the Saml2Configuration.DecryptionCertificate).");
@@ -356,7 +358,7 @@ namespace ITfoxtec.Identity.Saml2
             if (DecryptionCertificates?.Count() > 0)
             {
                 var exceptions = new List<Exception>();
-                foreach(var decryptionCertificate in DecryptionCertificates)
+                foreach (var decryptionCertificate in DecryptionCertificates)
                 {
                     try
                     {

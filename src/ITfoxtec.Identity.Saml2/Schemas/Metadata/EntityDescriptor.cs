@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -32,6 +32,7 @@ namespace ITfoxtec.Identity.Saml2.Schemas.Metadata
         public string EntityId { get; protected set; }
 
         /// <summary>
+        /// [Optional]
         /// A document-unique identifier for the element, typically used as a reference point when signing.
         /// </summary>
         public Saml2Id Id { get; protected set; }
@@ -42,8 +43,15 @@ namespace ITfoxtec.Identity.Saml2.Schemas.Metadata
         /// <value>The ID string.</value>
         public string IdAsString
         {
-            get { return Id.Value; }
+            get { return Id?.Value; }
         }
+
+        /// <summary>
+        /// [Optional]
+        /// Optional attribute indicates the expiration time of the metadata contained in the element and any contained elements.
+        /// Metadata is valid until in days from now.
+        /// </summary>
+        public int? ValidUntil { get; set; }
 
         /// <summary>
         /// [Optional]
@@ -56,14 +64,6 @@ namespace ITfoxtec.Identity.Saml2.Schemas.Metadata
         /// Default EndCertOnly (Only the end certificate is included in the X.509 chain information).
         /// </summary>
         public X509IncludeOption CertificateIncludeOption { get; set; }
-
-        /// <summary>
-        /// [Optional]
-        /// Optional attribute indicates the expiration time of the metadata contained in the element and any contained elements.
-        /// 
-        /// Metadata is valid until in days from now.
-        /// </summary>
-        public int? ValidUntil { get; set; }
 
         /// <summary>
         /// [Optional]
@@ -81,6 +81,12 @@ namespace ITfoxtec.Identity.Saml2.Schemas.Metadata
 
         /// <summary>
         /// [Optional]
+        /// Optional element specifying the organization associated with the entity described by the metadata.
+        /// </summary>
+        public Organization Organization { get; set; }
+
+        /// <summary>
+        /// [Optional]
         /// Optional element identifying various kinds of contact personnel.
         /// </summary>
         [Obsolete("The ContactPerson method is deprecated. Please use ContactPersons which is a list of contact persons.")]
@@ -91,6 +97,15 @@ namespace ITfoxtec.Identity.Saml2.Schemas.Metadata
         /// Optional element identifying various kinds of contact personnel.
         /// </summary>
         public IEnumerable<ContactPerson> ContactPersons { get; set; }
+
+        /// <summary>
+        /// [Optional]
+        /// This extension point contains optional metadata extension XML elements that are agreed on between 
+        /// the communicating parties. No extension schema is required in order to make use of this extension point, 
+        /// and even if one is provided, the lax validation setting does not impose a requirement for the extension 
+        /// to be valid. SAML extension elements MUST be namespace-qualified in a non-SAML-defined namespace.
+        /// </summary>
+        public Extensions Extensions { get; set; }
 
         public EntityDescriptor()
         { }
@@ -111,15 +126,20 @@ namespace ITfoxtec.Identity.Saml2.Schemas.Metadata
 
         public XmlDocument ToXmlDocument()
         {
-            var envelope = new XElement(Saml2MetadataConstants.MetadataNamespaceX + elementName);
-
-            envelope.Add(GetXContent());
+            var envelope = ToXElement();
             var xmlDocument = envelope.ToXmlDocument();
             if(MetadataSigningCertificate != null)
             {
-                xmlDocument.SignDocument(MetadataSigningCertificate, Config.SignatureAlgorithm, Config.XmlCanonicalizationMethod, CertificateIncludeOption, IdAsString);
+                xmlDocument.SignDocument(MetadataSigningCertificate, Config.SignatureAlgorithm, Config.XmlCanonicalizationMethod, CertificateIncludeOption, IdAsString, Config.IncludeKeyInfoName);
             }
             return xmlDocument;
+        }
+
+        public XElement ToXElement()
+        {
+            var envelope = new XElement(Saml2MetadataConstants.MetadataNamespaceX + elementName);
+            envelope.Add(GetXContent());
+            return envelope;
         }
 
         protected IEnumerable<XObject> GetXContent()
@@ -136,6 +156,11 @@ namespace ITfoxtec.Identity.Saml2.Schemas.Metadata
             }
             yield return new XAttribute(Saml2MetadataConstants.MetadataNamespaceNameX, Saml2MetadataConstants.MetadataNamespace);
 
+            if (Extensions != null) 
+            {
+                yield return Extensions.ToXElement();
+            }
+            
             if (SPSsoDescriptor != null)
             {
                 yield return SPSsoDescriptor.ToXElement();
@@ -144,6 +169,11 @@ namespace ITfoxtec.Identity.Saml2.Schemas.Metadata
             if (IdPSsoDescriptor != null)
             {
                 yield return IdPSsoDescriptor.ToXElement();
+            }
+
+            if (Organization != null)
+            {
+                yield return Organization.ToXElement();
             }
 
             if (ContactPersons != null)

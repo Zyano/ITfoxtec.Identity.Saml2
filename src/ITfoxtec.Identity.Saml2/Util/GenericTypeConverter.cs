@@ -1,5 +1,4 @@
-﻿using Schemas = ITfoxtec.Identity.Saml2.Schemas;
-using System;
+﻿using System;
 using System.Globalization;
 using System.Xml;
 using ITfoxtec.Identity.Saml2.Schemas;
@@ -44,7 +43,7 @@ namespace ITfoxtec.Identity.Saml2.Util
             }
             else if(genericType == typeof(AuthnContextComparisonTypes))
             {
-                if (Enum.TryParse(value, out AuthnContextComparisonTypes authnContextComparisonTypes))
+                if (Enum.TryParse(value, true, out AuthnContextComparisonTypes authnContextComparisonTypes))
                 {
                     return GenericConvertValue<T, AuthnContextComparisonTypes>(authnContextComparisonTypes);
                 }
@@ -88,6 +87,13 @@ namespace ITfoxtec.Identity.Saml2.Util
                     Comparison = ConvertValue<AuthnContextComparisonTypes>(xmlNode.Attributes[Schemas.Saml2Constants.Message.Comparison]?.Value, xmlNode),
                 });
             }
+            else if (genericType == typeof(Scoping))
+            {
+                return GenericConvertValue<T, Scoping>(new Scoping
+                {
+                    RequesterID = GetAuthnContextClassRef(xmlNode.SelectNodes($"//*[local-name()='{Schemas.Saml2Constants.Message.RequesterID}']")),
+                });
+            }
             else
             {
                 throw new NotSupportedException($"Unable to convert element {genericType}.");
@@ -107,7 +113,8 @@ namespace ITfoxtec.Identity.Saml2.Util
 
         static T GenericConvertValue<T, U>(U value)
         {
-            return (T)Convert.ChangeType(value, typeof(T));
+            var type = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
+            return (T)(value == null ? null : Convert.ChangeType(value, type));
         }
 
         static T? GenericConvertValueToNullable<T>(string value) where T : struct

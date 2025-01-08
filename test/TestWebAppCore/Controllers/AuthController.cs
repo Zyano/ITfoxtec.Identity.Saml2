@@ -32,33 +32,51 @@ namespace TestWebAppCore.Controllers
 
             return binding.Bind(new Saml2AuthnRequest(config)
             {
+                //AssertionConsumerServiceIndex = 0,
+                //AttributeConsumingServiceIndex = 0,
+                //AssertionConsumerServiceUrl = new Uri("https://test.com"),
+
                 //ForceAuthn = true,
                 Subject = new Subject { NameID = new NameID { ID = "abcd" } },
                 NameIdPolicy = new NameIdPolicy { AllowCreate = true, Format = "urn:oasis:names:tc:SAML:2.0:nameid-format:persistent" },
                 //Extensions = new AppExtensions(),
-                //RequestedAuthnContext = new RequestedAuthnContext
-                //{
-                //    Comparison = AuthnContextComparisonTypes.Exact,
-                //    AuthnContextClassRef = new string[] { AuthnContextClassTypes.PasswordProtectedTransport.OriginalString },
-                //},
+                RequestedAuthnContext = new RequestedAuthnContext
+                {
+                    Comparison = AuthnContextComparisonTypes.Minimum,
+                    AuthnContextClassRef = [AuthnContextClassTypes.PasswordProtectedTransport.OriginalString],
+                },
+                Scoping = new Scoping 
+                { 
+                    IDPList = new IDPList
+                    { 
+                        IDPEntry = [new IDPEntry 
+                        {
+                            ProviderID = "https://qaz.org",
+                            Name = "xxx",
+                            Loc = "https://wsx.org"
+                        }], 
+                        GetComplete = "xxx" 
+                    }, 
+                    RequesterID = ["https://xyz.org"] 
+                }
             }).ToActionResult();
         }
 
         [Route("AssertionConsumerService")]
         public async Task<IActionResult> AssertionConsumerService()
-        {       
-            var binding = new Saml2PostBinding();
+        {
+            var httpRequest = Request.ToGenericHttpRequest(validate: true);
             var saml2AuthnResponse = new Saml2AuthnResponse(config);
 
-            binding.ReadSamlResponse(Request.ToGenericHttpRequest(validate: true), saml2AuthnResponse);
+            httpRequest.Binding.ReadSamlResponse(httpRequest, saml2AuthnResponse);
             if (saml2AuthnResponse.Status != Saml2StatusCodes.Success)
             {
                 throw new AuthenticationException($"SAML Response status: {saml2AuthnResponse.Status}");
             }
-            binding.Unbind(Request.ToGenericHttpRequest(validate: true), saml2AuthnResponse);
+            httpRequest.Binding.Unbind(httpRequest, saml2AuthnResponse);
             await saml2AuthnResponse.CreateSession(HttpContext, claimsTransform: (claimsPrincipal) => ClaimsTransform.Transform(claimsPrincipal));
 
-            var relayStateQuery = binding.GetRelayStateQuery();
+            var relayStateQuery = httpRequest.Binding.GetRelayStateQuery();
             var returnUrl = relayStateQuery.ContainsKey(relayStateReturnUrl) ? relayStateQuery[relayStateReturnUrl] : Url.Content("~/");
             return Redirect(returnUrl);
         }
@@ -80,8 +98,8 @@ namespace TestWebAppCore.Controllers
         [Route("LoggedOut")]
         public IActionResult LoggedOut()
         {
-            var binding = new Saml2PostBinding();
-            binding.Unbind(Request.ToGenericHttpRequest(validate: true), new Saml2LogoutResponse(config));
+            var httpRequest = Request.ToGenericHttpRequest(validate: true);
+            httpRequest.Binding.Unbind(httpRequest, new Saml2LogoutResponse(config));
 
             return Redirect(Url.Content("~/"));
         }
@@ -90,11 +108,11 @@ namespace TestWebAppCore.Controllers
         public async Task<IActionResult> SingleLogout()
         {
             Saml2StatusCodes status;
-            var requestBinding = new Saml2PostBinding();
+            var httpRequest = Request.ToGenericHttpRequest(validate: true);
             var logoutRequest = new Saml2LogoutRequest(config, User);
             try
             {
-                requestBinding.Unbind(Request.ToGenericHttpRequest(validate: true), logoutRequest);
+                httpRequest.Binding.Unbind(httpRequest, logoutRequest);
                 status = Saml2StatusCodes.Success;
                 await logoutRequest.DeleteSession(HttpContext);
             }
@@ -106,7 +124,7 @@ namespace TestWebAppCore.Controllers
             }
 
             var responsebinding = new Saml2PostBinding();
-            responsebinding.RelayState = requestBinding.RelayState;
+            responsebinding.RelayState = httpRequest.Binding.RelayState;
             var saml2LogoutResponse = new Saml2LogoutResponse(config)
             {
                 InResponseToAsString = logoutRequest.IdAsString,
